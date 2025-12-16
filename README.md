@@ -15,7 +15,7 @@ A Golang CLI tool for Google Workspace security and audit operations.
 
 ## Installation
 
-Requires Go 1.23 or later.
+Requires Go 1.25 or later.
 
 ```bash
 go install github.com/leansecurity-co/gwork@latest
