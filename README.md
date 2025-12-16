@@ -218,46 +218,72 @@ fi
 
 ## Prerequisites
 
-Before using gwork, you need to set up a Google Cloud service account with domain-wide delegation:
+Before using gwork, you need to set up a Google Cloud service account with domain-wide delegation.
 
-1. **Create a Google Cloud Project**
-   - Go to the [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select an existing one
+### Using gcloud CLI
 
-2. **Enable the Google Drive API**
-   - Navigate to "APIs & Services" > "Library"
-   - Search for "Google Drive API" and enable it
+```bash
+# Set your project ID and service account name
+export PROJECT_ID="your-project-id"
+export SA_NAME="gwork-audit"
+export SA_DISPLAY_NAME="gwork Drive Audit"
 
-3. **Create a Service Account**
-   - Go to "APIs & Services" > "Credentials"
-   - Click "Create Credentials" > "Service Account"
-   - Fill in the service account details and create
+# Create or select a Google Cloud project
+gcloud projects create $PROJECT_ID --name="gwork Audit" 2>/dev/null || \
+  gcloud config set project $PROJECT_ID
 
-4. **Enable Domain-Wide Delegation**
-   - Click on the created service account
-   - Go to "Show Domain-Wide Delegation"
-   - Enable "Enable Google Workspace Domain-wide Delegation"
-   - Note the service account's "Client ID"
+# Enable the Google Drive API
+gcloud services enable drive.googleapis.com
 
-5. **Download Service Account Key**
-   - In the service account details, go to "Keys" tab
-   - Click "Add Key" > "Create new key"
-   - Select JSON format and download the key file
+# Create the service account
+gcloud iam service-accounts create $SA_NAME \
+  --display-name="$SA_DISPLAY_NAME" \
+  --description="Service account for gwork Google Drive auditing"
 
-6. **Authorize in Google Workspace Admin Console**
-   - Go to [Google Workspace Admin Console](https://admin.google.com/)
-   - Navigate to "Security" > "API Controls" > "Domain-wide Delegation"
-   - Click "Add new" and enter the service account's Client ID
-   - Add these OAuth scopes:
-     - `https://www.googleapis.com/auth/drive.readonly`
-     - `https://www.googleapis.com/auth/drive.metadata.readonly`
-   - Click "Authorize"
+# Get the service account email
+export SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
-7. **Configure gwork**
-   - Run `gwork config init` to create `.gwork.yaml`
-   - Set `service_account_file` to the path of your downloaded JSON key
-   - Set `admin_email` to a Google Workspace admin user's email
-   - Set `domain` to your organization's domain
+# Create and download the service account key
+gcloud iam service-accounts keys create ./service-account.json \
+  --iam-account=$SA_EMAIL
+
+# Get the service account unique ID (needed for domain-wide delegation)
+gcloud iam service-accounts describe $SA_EMAIL --format='value(uniqueId)'
+```
+
+### Enable Domain-Wide Delegation (Google Cloud Console)
+
+1. Go to [Google Cloud Console > IAM > Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
+2. Click on the created service account
+3. Click "Advanced settings" > "Domain-wide Delegation"
+4. Check "Enable Google Workspace Domain-wide Delegation"
+5. Save and note the **Client ID** displayed
+
+### Authorize in Google Workspace Admin Console
+
+1. Go to [Google Workspace Admin Console](https://admin.google.com/)
+2. Navigate to **Security** > **Access and data control** > **API Controls** > **Domain-wide Delegation**
+3. Click **Add new**
+4. Enter the service account's **Client ID** (from the previous step)
+5. Add these OAuth scopes (comma-separated):
+
+   ```text
+   https://www.googleapis.com/auth/drive.readonly,https://www.googleapis.com/auth/drive.metadata.readonly
+   ```
+
+6. Click **Authorize**
+
+### Configure gwork
+
+```bash
+# Initialize configuration
+gwork config init
+
+# Edit .gwork.yaml with your settings:
+# - service_account_file: path to service-account.json
+# - admin_email: a Google Workspace admin user's email
+# - domain: your organization's domain (e.g., company.com)
+```
 
 ## Output File Schemas
 
